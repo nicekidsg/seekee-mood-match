@@ -10,7 +10,7 @@ const candidate = (id, title, weight = 50, extra = {}) => ({
 });
 
 export const MODULE_CONFIG = {
-  moduleVersion: "mood_intent_v1_1",
+  moduleVersion: "mood_intent_v1_2",
   enabled: true,
   experimentGroup: "treatment",
   playlistSource: "existing_youtube_music",
@@ -108,6 +108,117 @@ export const MODULE_CONFIG = {
   ],
 };
 
+const BASE_QUICK_KEYWORDS = {
+  focus: ["study", "focus", "lofi", "reading"],
+  relax: ["chill", "relaxed", "coffee", "jazz"],
+  energy: ["workout", "gym", "high bpm", "motivational"],
+  party: ["party", "dance", "edm", "carnival"],
+  release: ["sad", "heartbreak", "breakup", "melancholic"],
+  sleep: ["sleep", "rain", "peaceful", "white noise"],
+};
+
+export const QUICK_CATEGORIES = [
+  ...MODULE_CONFIG.intents.map(intent => ({
+    id: intent.id,
+    intentId: intent.id,
+    icon: intent.icon,
+    tint: intent.tint,
+    labels: intent.labels,
+    hints: intent.hints,
+    keywords: BASE_QUICK_KEYWORDS[intent.id],
+  })),
+  {
+    id: "reggaeton",
+    intentId: "party",
+    icon: "♬",
+    tint: "#ffe8d7",
+    labels: { es: "Reggaeton", pt: "Reggaeton", en: "Reggaeton" },
+    hints: { es: "Ritmo latino", pt: "Ritmo latino", en: "Latin rhythm" },
+    keywords: ["reggaeton"],
+  },
+  {
+    id: "latin",
+    intentId: "party",
+    icon: "💃",
+    tint: "#fff1c9",
+    labels: { es: "Ritmos latinos", pt: "Ritmos latinos", en: "Latin vibes" },
+    hints: { es: "Salsa y cumbia", pt: "Salsa e cumbia", en: "Salsa and cumbia" },
+    keywords: ["latin", "salsa", "cumbia"],
+  },
+  {
+    id: "romance",
+    intentId: "relax",
+    icon: "♥",
+    tint: "#ffe5ef",
+    labels: { es: "Romántico", pt: "Romântico", en: "Romantic" },
+    hints: { es: "Amor y citas", pt: "Amor e encontros", en: "Love and date night" },
+    keywords: ["romantic", "love", "date", "valentine"],
+  },
+  {
+    id: "drive",
+    intentId: "energy",
+    icon: "◇",
+    tint: "#e2efff",
+    labels: { es: "En el auto", pt: "No carro", en: "Road trip" },
+    hints: { es: "Música para manejar", pt: "Música para dirigir", en: "Windows down" },
+    keywords: ["drive", "road trip", "driving", "windows-down"],
+  },
+  {
+    id: "soccer",
+    intentId: "party",
+    icon: "⚽",
+    tint: "#e1f7ec",
+    labels: { es: "Fútbol", pt: "Futebol", en: "Soccer" },
+    hints: { es: "Modo estadio", pt: "Modo estádio", en: "Stadium mode" },
+    keywords: ["football", "soccer", "world cup", "fifa"],
+  },
+  {
+    id: "kpop",
+    intentId: "energy",
+    icon: "★",
+    tint: "#eee7ff",
+    labels: { es: "K-Pop", pt: "K-Pop", en: "K-Pop" },
+    hints: { es: "Hits y coreografías", pt: "Hits e coreografias", en: "Hits and choreography" },
+    keywords: ["kpop", "k-pop"],
+  },
+  {
+    id: "rock",
+    intentId: "energy",
+    icon: "♯",
+    tint: "#ffe8d7",
+    labels: { es: "Rock", pt: "Rock", en: "Rock" },
+    hints: { es: "Guitarras y clásicos", pt: "Guitarras e clássicos", en: "Guitars and classics" },
+    keywords: ["rock", "guitar"],
+  },
+  {
+    id: "soundtracks",
+    intentId: "focus",
+    icon: "▰",
+    tint: "#e7edff",
+    labels: { es: "Cine y series", pt: "Filmes e séries", en: "Soundtracks" },
+    hints: { es: "Bandas sonoras", pt: "Trilhas sonoras", en: "Movies and TV" },
+    keywords: ["ost", "soundtrack", "movie", "film", "series", "anime"],
+  },
+  {
+    id: "family",
+    intentId: "relax",
+    icon: "☀",
+    tint: "#fff1c9",
+    labels: { es: "Niños y familia", pt: "Crianças e família", en: "Family time" },
+    hints: { es: "Para escuchar juntos", pt: "Para ouvir juntos", en: "Listen together" },
+    keywords: ["kids", "family", "children", "disney"],
+  },
+  {
+    id: "shower",
+    intentId: "energy",
+    icon: "≈",
+    tint: "#e2efff",
+    labels: { es: "En la ducha", pt: "No banho", en: "Shower time" },
+    hints: { es: "Canta sin parar", pt: "Cante sem parar", en: "Sing it out" },
+    keywords: ["shower"],
+  },
+];
+
 export const COPY = {
   es: {
     eyebrow: "PARA ESTE MOMENTO",
@@ -132,7 +243,7 @@ export const COPY = {
     assistantMomentSub: "Elige una opción. No hay formulario.",
     assistantEnergyTitle: "¿Qué energía buscas?",
     assistantEnergySub: "Al tocar, la música empieza de inmediato.",
-    tabs: ["Inicio", "Music", "Video", "Yo"],
+    musicTab: "Music",
   },
   pt: {
     eyebrow: "PARA ESTE MOMENTO",
@@ -157,7 +268,7 @@ export const COPY = {
     assistantMomentSub: "Escolha uma opção. Não é um formulário.",
     assistantEnergyTitle: "Que energia você busca?",
     assistantEnergySub: "Ao tocar, a música começa na hora.",
-    tabs: ["Início", "Music", "Vídeo", "Eu"],
+    musicTab: "Music",
   },
   en: {
     eyebrow: "FOR THIS MOMENT",
@@ -182,7 +293,7 @@ export const COPY = {
     assistantMomentSub: "Pick one option. This is not a questionnaire.",
     assistantEnergyTitle: "What energy do you want?",
     assistantEnergySub: "Your tap starts the music right away.",
-    tabs: ["Home", "Music", "Video", "Me"],
+    musicTab: "Music",
   },
 };
 
@@ -216,9 +327,3 @@ export const REFINE_LABELS = {
   whiteNoise: { es: "Ruido blanco", pt: "Ruído branco", en: "White noise" },
   shuffle: { es: "Cambiar selección", pt: "Trocar seleção", en: "Try another" },
 };
-
-export const BROWSE_PLAYLISTS = [
-  candidate("PLu7El_KDcFbMv8NycWBB5KYH4BzM4Zwad", "Bad Bunny Top Songs", 1, { icon: "B", gradient: "linear-gradient(135deg,#ff4f36,#ff9c62)" }),
-  candidate("PLu7El_KDcFbOMToK8Jh9dnr9TKluPnP2W", "KAROL G Top Songs", 1, { icon: "K", gradient: "linear-gradient(135deg,#8d4df1,#ff6db4)" }),
-  candidate("PLu7El_KDcFbMMzzby1gCXHS_nkzDV2MjD", "FIFA World Cup 2026", 1, { icon: "⚽", gradient: "linear-gradient(135deg,#0e8b62,#4ecf91)" }),
-];

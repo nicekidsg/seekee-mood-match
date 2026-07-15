@@ -1,15 +1,18 @@
 import {
   ASSISTANT_OPTIONS,
-  BROWSE_PLAYLISTS,
   COPY,
   MODULE_CONFIG,
+  QUICK_CATEGORIES,
   REFINE_LABELS,
 } from "./config.mjs";
+import { ALL_PLAYLISTS } from "./catalog.mjs";
 import {
   analyticsEvent,
   buildCandidateQueue,
+  buildQuickQueue,
   hashString,
   resolveAssistantIntent,
+  stableSample,
   validateModuleConfig,
 } from "./core.mjs";
 
@@ -24,6 +27,8 @@ const experimentGroup = resolveExperimentGroup();
 const featureEnabled = MODULE_CONFIG.enabled
   && query.get("feature") !== "off"
   && experimentGroup === "treatment";
+const quickCategories = stableSample(QUICK_CATEGORIES, 6, `${sessionId}:one-tap`);
+const browsePlaylists = stableSample(ALL_PLAYLISTS, 3, `${sessionId}:top-right-now`);
 
 const analyticsBase = {
   user_id: userId,
@@ -152,48 +157,81 @@ function applyCopy() {
   document.querySelector("#youtube-disclosure").textContent = copy.youtubeDisclosure;
   elements.nowPlayingLabel.textContent = copy.nowPlaying;
   elements.retryButton.textContent = copy.retry;
-  ["home", "music", "video", "me"].forEach((key, index) => {
-    document.querySelector(`#tab-${key}`).textContent = copy.tabs[index];
-  });
+  document.querySelector("#tab-music").textContent = copy.musicTab;
 }
 
 function renderIntents() {
-  elements.intentGrid.replaceChildren(...MODULE_CONFIG.intents.map((intent, position) => {
+  elements.intentGrid.replaceChildren(...quickCategories.map((category, position) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "intent-button";
-    button.dataset.intentId = intent.id;
-    button.style.setProperty("--intent-tint", intent.tint);
-    button.setAttribute("aria-label", `${intent.labels[language]}. ${intent.hints[language]}`);
+    button.dataset.categoryId = category.id;
+    button.style.setProperty("--intent-tint", category.tint);
+    button.setAttribute("aria-label", `${category.labels[language]}. ${category.hints[language]}`);
     button.innerHTML = `
-      <span class="intent-icon" aria-hidden="true">${intent.icon}</span>
+      <span class="intent-icon" aria-hidden="true">${category.icon}</span>
       <span class="intent-copy">
-        <strong>${intent.labels[language]}</strong>
-        <small>${intent.hints[language]}</small>
+        <strong>${category.labels[language]}</strong>
+        <small>${category.hints[language]}</small>
       </span>`;
     button.addEventListener("click", () => {
-      track("intent_click", { intent_id: intent.id, position: position + 1, entry: "quick" });
-      requestIntent(intent.id, "quick");
+      track("intent_click", {
+        intent_id: category.intentId,
+        category_id: category.id,
+        position: position + 1,
+        entry: "quick",
+      });
+      requestQuickCategory(category);
     });
     return button;
   }));
 }
 
+const PLAYLIST_GRADIENTS = [
+  "linear-gradient(135deg,#ff4f36,#ff9c62)",
+  "linear-gradient(135deg,#8d4df1,#ff6db4)",
+  "linear-gradient(135deg,#0e8b62,#4ecf91)",
+  "linear-gradient(135deg,#3867d6,#74b9ff)",
+  "linear-gradient(135deg,#e17055,#fdcb6e)",
+  "linear-gradient(135deg,#2d3436,#636e72)",
+];
+
+function playlistVisual(playlist) {
+  const emoji = playlist.title.match(/\p{Extended_Pictographic}/u)?.[0];
+  const letter = playlist.title.match(/[\p{L}\p{N}]/u)?.[0]?.toUpperCase() || "♫";
+  return {
+    icon: emoji || letter,
+    gradient: PLAYLIST_GRADIENTS[hashString(playlist.id) % PLAYLIST_GRADIENTS.length],
+  };
+}
+
 function renderBrowse() {
-  elements.playlistList.replaceChildren(...BROWSE_PLAYLISTS.map((playlist, index) => {
+  elements.playlistList.replaceChildren(...browsePlaylists.map((playlist, index) => {
+    const visual = playlistVisual(playlist);
     const card = document.createElement("article");
     card.className = "playlist-card";
-    card.innerHTML = `
-      <div class="playlist-cover" style="background:${playlist.gradient}" aria-hidden="true">${playlist.icon}</div>
-      <div class="playlist-copy">
-        <strong>${playlist.title}</strong>
-        <small>YouTube · Seekee Music</small>
-      </div>
-      <button class="playlist-play" type="button" aria-label="Play ${playlist.title}">▶</button>`;
-    card.querySelector("button").addEventListener("click", () => {
+    const cover = document.createElement("div");
+    cover.className = "playlist-cover";
+    cover.style.background = visual.gradient;
+    cover.setAttribute("aria-hidden", "true");
+    cover.textContent = visual.icon;
+    const cardCopy = document.createElement("div");
+    cardCopy.className = "playlist-copy";
+    const title = document.createElement("strong");
+    title.textContent = playlist.title;
+    const source = document.createElement("small");
+    source.textContent = "YouTube · Seekee Music";
+    cardCopy.append(title, source);
+    const button = document.createElement("button");
+    button.className = "playlist-play";
+    button.type = "button";
+    button.setAttribute("aria-label", `Play ${playlist.title}`);
+    button.textContent = "▶";
+    button.addEventListener("click", () => {
       track("playlist_click", { youtube_music_playlist_id: playlist.id, position: index + 1, entry: "existing_content" });
       requestDirectPlaylist(playlist);
     });
+    card.append(cover, cardCopy, button);
     return card;
   }));
 }
@@ -249,11 +287,34 @@ function requestIntent(intentId, entry) {
   });
 }
 
+function requestQuickCategory(category) {
+  const intent = MODULE_CONFIG.intents.find(item => item.id === category.intentId);
+  beginRequest({
+    intentId: category.intentId,
+    intentLabel: category.labels[language],
+    queue: buildQuickQueue(category, ALL_PLAYLISTS, sessionId),
+    entry: "quick",
+    refineOptions: intent?.refineOptions || [],
+  });
+}
+
 function requestDirectPlaylist(playlist) {
+  const alternatives = stableSample(
+    ALL_PLAYLISTS.filter(item => item.id !== playlist.id),
+    2,
+    `${sessionId}:browse:${playlist.id}`,
+  );
   beginRequest({
     intentId: "browse",
     intentLabel: playlist.title,
-    queue: [{ ...playlist, candidateSource: "existing_content", candidateRank: 1 }],
+    queue: [
+      { ...playlist, candidateSource: "primary", candidateRank: 1 },
+      ...alternatives.map((item, index) => ({
+        ...item,
+        candidateSource: "fallback",
+        candidateRank: index + 2,
+      })),
+    ],
     entry: "existing_content",
     refineOptions: [],
   });
@@ -641,8 +702,9 @@ function observeModuleView() {
     if (tracked) return;
     tracked = true;
     track("intent_module_view", {
-      positions: MODULE_CONFIG.intents.map((_, index) => index + 1),
-      intent_ids: MODULE_CONFIG.intents.map(intent => intent.id),
+      positions: quickCategories.map((_, index) => index + 1),
+      category_ids: quickCategories.map(category => category.id),
+      intent_ids: quickCategories.map(category => category.intentId),
     });
   };
   if (!("IntersectionObserver" in window)) {

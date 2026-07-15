@@ -1,6 +1,6 @@
 # Seekee Music Tab · 轻量情境推荐 Demo
 
-这个版本把原仓库的“落地页 + 三步问卷 + 结果页 + 外跳 YouTube”重构成 PRD v1.1 的 App 内轻量入口：用户进入 Music Tab 后，点击 6 个固定意图中的任意一个，即在当前页面用 YouTube IFrame Player API 加载并播放现有歌单。
+这个版本把原仓库的“落地页 + 三步问卷 + 结果页 + 外跳 YouTube”重构成 PRD v1.1 的 App 内轻量入口：用户进入 Music Tab 后，从每次会话随机展示的 6 个 One Tap 分类中任选一个，即在当前页面用 YouTube IFrame Player API 加载并播放现有歌单。
 
 ## 本地运行
 
@@ -25,18 +25,18 @@ npm run serve
 npm test
 ```
 
-测试覆盖固定入口顺序、配置完整性、候选过滤、稳定队列、primary → fallback 顺序，以及两步辅助流程的意图解析。
+测试覆盖完整歌单目录、随机分类、稳定抽样、候选过滤、primary → fallback 顺序，以及两步辅助流程的意图解析。
 
 ## PRD v1.1 对照
 
-- 已实现：首屏 6 个固定意图，2 列 × 3 行；默认路径一次点击即请求播放。
+- 已实现：One Tap 从 16 个分类中稳定随机展示 6 个，保持 2 列 × 3 行；默认路径一次点击即请求播放。
 - 已实现：“帮我选”最多两步，第二步点击后直接播放；无曲风页、确认页或推荐结果页。
 - 已实现：ES/PT/EN 随浏览器/App 语言；界面无语言选择器。
-- 已实现：18 个现有仓库 YouTube Music 歌单 ID，按 6 个意图配置为 2 个 primary + 1 个 fallback。
+- 已实现：恢复原仓库全部 622 个 YouTube Music 歌单；分类推荐和 Top right now 都从完整目录稳定随机抽取，并保留 2 个 primary + 1 个 fallback。
 - 已实现：`IDLE → REQUESTING → PLAYING` 与 `REQUESTING → FALLBACK → PLAYING / ERROR` 状态。
 - 已实现：`music_tab_impression`、`intent_module_view`、`intent_click`、`play_request`、`play_start`、`play_fail`、`play_30s`、`play_3m`、`first_track_skip`、`refine_click`、`shuffle_click` 等事件；`play_start` 只由 `YT.PlayerState.PLAYING` 回调产生。
 - 已实现：离线、请求超时、播放器错误、fallback、全部失败、重复点击节流、Feature Flag 与实验组。
-- 已实现：原 Music Tab 下方歌单入口保留且仍可在同一个播放器内启播。
+- 已实现：Top right now 每次会话从完整歌单目录随机展示 3 个；底部导航仅保留 Music。
 - 接口依赖：这是纯 Web demo，事件目前写入 `window.__SEKEE_EVENTS__` 并发出 `seekee:analytics` 事件；接入 Android App 时需替换为现有 AnalyticsAdapter。
 
 ## YouTube IFrame 合规实现

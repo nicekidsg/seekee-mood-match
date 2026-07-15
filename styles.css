@@ -416,8 +416,8 @@ button {
 }
 
 .tabbar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  justify-content: center;
   margin-top: 32px;
   border-top: 1px solid var(--line);
   padding-top: 16px;
@@ -425,6 +425,7 @@ button {
 
 .tabbar > span {
   display: grid;
+  min-width: 88px;
   min-height: 48px;
   place-items: center;
   color: #9a9298;

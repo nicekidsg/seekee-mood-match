@@ -46,6 +46,43 @@ export function buildCandidateQueue(intent, context, sessionId) {
   }));
 }
 
+export function stableSample(items, count, seed) {
+  return [...items]
+    .map(item => ({ item, order: hashString(`${seed}:${item.id}`) }))
+    .sort((a, b) => a.order - b.order)
+    .slice(0, count)
+    .map(({ item }) => item);
+}
+
+export function buildQuickQueue(category, catalog, sessionId) {
+  const keywords = category.keywords.map(value => value.toLowerCase());
+  const matches = catalog.filter(playlist => {
+    const haystack = `${playlist.title} ${playlist.terms.join(" ")}`.toLowerCase();
+    return keywords.some(keyword => haystack.includes(keyword));
+  });
+
+  const matched = stableSample(matches, 2, `${sessionId}:${category.id}:matches`);
+  const matchedIds = new Set(matched.map(item => item.id));
+  const fill = stableSample(
+    catalog.filter(item => !matchedIds.has(item.id)),
+    2 - matched.length,
+    `${sessionId}:${category.id}:fill`,
+  );
+  const primary = [...matched, ...fill];
+  const primaryIds = new Set(primary.map(item => item.id));
+  const fallback = stableSample(
+    catalog.filter(item => !primaryIds.has(item.id)),
+    1,
+    `${sessionId}:${category.id}:fallback`,
+  );
+
+  return [...primary, ...fallback].map((item, index) => ({
+    ...item,
+    candidateRank: index + 1,
+    candidateSource: index < primary.length ? "primary" : "fallback",
+  }));
+}
+
 export function resolveAssistantIntent(moment, energy) {
   if (moment === "bedtime") return "sleep";
   if (energy === "emotional") return "release";

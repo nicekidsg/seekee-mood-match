@@ -1,10 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MODULE_CONFIG } from "../src/config.mjs";
+import { ALL_PLAYLISTS } from "../src/catalog.mjs";
+import { MODULE_CONFIG, QUICK_CATEGORIES } from "../src/config.mjs";
 import {
   buildCandidateQueue,
+  buildQuickQueue,
   candidateAllowed,
   resolveAssistantIntent,
+  stableSample,
   validateModuleConfig,
 } from "../src/core.mjs";
 
@@ -53,4 +56,26 @@ test("the assistant resolves after exactly moment and desired-energy choices", (
   assert.equal(resolveAssistantIntent("party", "happy"), "party");
   assert.equal(resolveAssistantIntent("rest", "emotional"), "release");
   assert.equal(resolveAssistantIntent("rest", "calm"), "relax");
+});
+
+test("the original catalog is complete and contains unique playlist IDs", () => {
+  assert.equal(ALL_PLAYLISTS.length, 622);
+  assert.equal(new Set(ALL_PLAYLISTS.map(item => item.id)).size, 622);
+});
+
+test("one-tap categories are sampled stably from a larger pool", () => {
+  assert.ok(QUICK_CATEGORIES.length > 6);
+  const first = stableSample(QUICK_CATEGORIES, 6, "session-a");
+  const second = stableSample(QUICK_CATEGORIES, 6, "session-a");
+  assert.deepEqual(first, second);
+  assert.equal(new Set(first.map(item => item.id)).size, 6);
+});
+
+test("every randomized one-tap category produces two primary playlists and one fallback", () => {
+  for (const category of QUICK_CATEGORIES) {
+    const queue = buildQuickQueue(category, ALL_PLAYLISTS, "stable-session");
+    assert.equal(queue.length, 3);
+    assert.deepEqual(queue.map(item => item.candidateSource), ["primary", "primary", "fallback"]);
+    assert.equal(new Set(queue.map(item => item.id)).size, 3);
+  }
 });
